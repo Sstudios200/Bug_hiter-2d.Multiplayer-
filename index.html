@@ -1,0 +1,903 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Bug-Hitter 2D</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <script src="https://unpkg.com/peerjs@1.5.2/dist/peerjs.min.js"></script>
+    <style>
+        * {
+            box-sizing: border-box;
+            user-select: none;
+            -webkit-user-select: none;
+            margin: 0;
+            padding: 0;
+            touch-action: manipulation;
+        }
+
+        body, html {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background-color: #0d0d11;
+            font-family: 'Press Start 2P', monospace;
+            color: #ffffff;
+            cursor: default;
+        }
+
+        #game-container {
+            position: relative;
+            width: 100vw;
+            height: 100vh;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            background: #181824;
+        }
+
+        canvas {
+            display: block;
+            image-rendering: pixelated;
+            image-rendering: crisp-edges;
+            box-shadow: 0 0 30px rgba(0, 0, 0, 0.8);
+        }
+
+        .ui-layer {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+            padding: 16px;
+            z-index: 10;
+        }
+
+        .interactive {
+            pointer-events: auto;
+        }
+
+        #hud {
+            display: none;
+            justify-content: space-between;
+            align-items: center;
+            background: #2b2b36;
+            border: 4px solid #4a4a5a;
+            border-radius: 8px;
+            padding: 12px 20px;
+            width: 100%;
+            max-width: 900px;
+            margin: 0 auto;
+            box-shadow: 0 6px 0 #111118;
+        }
+
+        .hud-stat {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-size: 12px;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .hud-stat span {
+            color: #ffcc00;
+        }
+
+        .btn-icon {
+            background: #3a3a4c;
+            border: 3px solid #6c6c8a;
+            color: #fff;
+            padding: 8px 12px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 12px;
+            cursor: pointer;
+            box-shadow: 0 4px 0 #1b1b26;
+        }
+
+        .btn-icon:active {
+            transform: translateY(4px);
+            box-shadow: 0 0 0 #1b1b26;
+        }
+
+        .menu-screen {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(13, 13, 17, 0.94);
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            z-index: 20;
+            gap: 16px;
+            text-align: center;
+            padding: 20px;
+        }
+
+        .title-box {
+            background: #222230;
+            border: 6px solid #474761;
+            padding: 20px 32px;
+            border-radius: 12px;
+            box-shadow: 0 8px 0 #0f0f17, inset 0 0 20px rgba(0,0,0,0.5);
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% { transform: translateY(0px); }
+            50% { transform: translateY(-8px); }
+        }
+
+        h1 {
+            font-size: 28px;
+            color: #ff4757;
+            text-shadow: 4px 4px 0 #5f101d, -2px -2px 0 #ff9ff3;
+            letter-spacing: 2px;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            font-size: 11px;
+            color: #00d2d3;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .btn-main {
+            background: #2ed573;
+            border: 4px solid #1e90ff;
+            color: #ffffff;
+            padding: 14px 28px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 14px;
+            cursor: pointer;
+            box-shadow: 0 6px 0 #0f5229;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .btn-main:active {
+            transform: translateY(6px);
+            box-shadow: 0 0 0 #0f5229;
+        }
+
+        .btn-secondary {
+            background: #ffa502;
+            border: 4px solid #ff7f50;
+            color: #fff;
+            padding: 12px 20px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 11px;
+            cursor: pointer;
+            box-shadow: 0 5px 0 #a25200;
+            text-shadow: 2px 2px 0 #000;
+        }
+
+        .btn-secondary:active {
+            transform: translateY(5px);
+            box-shadow: 0 0 0 #a25200;
+        }
+
+        .menu-row {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            justify-content: center;
+        }
+
+        .shop-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 14px;
+            max-width: 550px;
+            width: 90%;
+        }
+
+        .shop-card {
+            background: #252538;
+            border: 4px solid #3d3d5c;
+            padding: 14px;
+            border-radius: 8px;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 8px;
+        }
+
+        .shop-card.active {
+            border-color: #2ed573;
+            background: #1c2b22;
+        }
+
+        .info-badge {
+            font-size: 10px;
+            color: #aaa;
+            background: rgba(0,0,0,0.5);
+            padding: 8px 16px;
+            border-radius: 20px;
+            border: 2px solid #444;
+        }
+
+        .code-input {
+            background: #181824;
+            border: 4px solid #00d2d3;
+            color: #fff;
+            padding: 10px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 16px;
+            text-align: center;
+            width: 180px;
+            letter-spacing: 4px;
+        }
+
+        .copyright-footer {
+            margin-top: 15px;
+            font-size: 9px;
+            color: #8888a0;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+            align-items: center;
+        }
+
+        .copyright-footer a {
+            color: #00d2d3;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        .modal-body {
+            max-width: 500px;
+            background: #222230;
+            border: 4px solid #474761;
+            padding: 20px;
+            border-radius: 8px;
+            font-size: 9px;
+            line-height: 1.6;
+            text-align: left;
+            color: #cccccc;
+        }
+    </style>
+</head>
+<body>
+
+<div id="game-container">
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="ui-layer">
+        <div id="hud" class="interactive">
+            <div class="hud-stat" id="p1-hud">P1: <span id="score-val">0</span></div>
+            <div class="hud-stat" id="p2-hud" style="display:none; color:#ff4757;">P2: <span id="p2-score-val" style="color:#ff4757;">0</span></div>
+            <div class="hud-stat">ZEIT: <span id="time-val">30</span>s</div>
+            <div class="hud-stat">MÜNZEN: <span id="coins-val">0</span></div>
+            <div style="display:flex; gap:8px;">
+                <button class="btn-icon" id="sound-btn">🔊</button>
+                <button class="btn-icon" id="pause-btn">⏸️</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- START SCREEN -->
+    <div id="start-screen" class="menu-screen interactive">
+        <div class="title-box">
+            <h1>BUG-HITTER 2D</h1>
+            <div class="subtitle">RETRO ARCADE SMASHER</div>
+        </div>
+
+        <div class="info-badge">
+            HIGHSCORE: <span id="highscore-val" style="color:#ffcc00">0</span> | MÜNZEN: <span id="total-coins-val" style="color:#00d2d3">0</span>
+        </div>
+
+        <button class="btn-main" id="start-btn">► SOLO SPIELEN</button>
+        
+        <div class="menu-row">
+            <button class="btn-secondary" id="mp-menu-btn" style="background:#ff4757; border-color:#ff6b81;">⚔️ MULTIPLAYER (P2P)</button>
+            <button class="btn-secondary" id="shop-btn">🛒 SHOP</button>
+        </div>
+
+        <div class="copyright-footer">
+            <div>© by S - All Rights Reserved</div>
+            <div><a id="guidelines-btn">Richtlinien & Fairplay</a></div>
+        </div>
+    </div>
+
+    <!-- GUIDELINES MODAL -->
+    <div id="guidelines-modal" class="menu-screen interactive" style="display:none;">
+        <div class="title-box" style="padding:14px;">
+            <h1 style="font-size:18px; margin:0;">RICHTLINIEN & COPYRIGHT</h1>
+        </div>
+
+        <div class="modal-body">
+            <p style="margin-bottom: 10px; color: #2ed573;"><strong>© Copyright by S</strong></p>
+            <p style="margin-bottom: 8px;">• Alle Grafiken, Sounds und Spiellogiken sind geschützt.</p>
+            <p style="margin-bottom: 8px;">• <strong>Fairplay im Multiplayer:</strong> Automatisierte Klicker (Autoclicker) sind verboten.</p>
+            <p style="margin-bottom: 8px;">• <strong>P2P Sicherheit:</strong> Verwende den Einladungscode nur mit Vertrauenspersonen.</p>
+            <p>• Viel Spaß beim Fliegenklatschen!</p>
+        </div>
+
+        <button class="btn-secondary" id="close-guidelines-btn">VERSTANDEN</button>
+    </div>
+
+    <!-- MULTIPLAYER MENU -->
+    <div id="mp-screen" class="menu-screen interactive" style="display:none;">
+        <div class="title-box" style="padding:16px;">
+            <h1 style="font-size:20px; margin:0;">P2P MULTIPLAYER</h1>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:12px; align-items:center;">
+            <button class="btn-main" id="create-room-btn">RAUM ERSTELLEN</button>
+            <div id="room-code-display" class="info-badge" style="display:none; font-size:12px; color:#ffcc00;">
+                DEIN CODE: <span id="my-code-val" style="color:#00d2d3; font-size:16px;">----</span>
+            </div>
+        </div>
+
+        <div style="font-size:10px; color:#aaa;">--- ODER ---</div>
+
+        <div style="display:flex; flex-direction:column; gap:10px; align-items:center;">
+            <input type="text" id="join-code-input" class="code-input" maxlength="4" placeholder="CODE">
+            <button class="btn-secondary" id="join-room-btn">RAUM BEITRETEN</button>
+        </div>
+
+        <div id="mp-status" style="font-size:10px; color:#ff4757;"></div>
+
+        <button class="btn-secondary" id="close-mp-btn" style="margin-top:10px;">ZURÜCK</button>
+    </div>
+
+    <!-- SHOP MODAL -->
+    <div id="shop-modal" class="menu-screen interactive" style="display:none;">
+        <div class="title-box" style="padding:16px;">
+            <h1 style="font-size:20px; margin:0;">KLATSCHEN SHOP</h1>
+        </div>
+        <div style="font-size: 11px; color:#ffcc00;">MÜNZEN: <span id="shop-coins-val">0</span></div>
+
+        <div class="shop-grid" id="shop-items"></div>
+
+        <button class="btn-secondary" id="close-shop-btn">ZURÜCK</button>
+    </div>
+
+    <!-- PAUSE SCREEN -->
+    <div id="pause-screen" class="menu-screen interactive" style="display:none;">
+        <div class="title-box">
+            <h1>PAUSE</h1>
+        </div>
+        <button class="btn-main" id="resume-btn">FORTSETZEN</button>
+        <button class="btn-secondary" id="quit-btn">HAUPTMENÜ</button>
+    </div>
+
+    <!-- GAME OVER SCREEN -->
+    <div id="gameover-screen" class="menu-screen interactive" style="display:none;">
+        <div class="title-box">
+            <h1 style="color:#ff4757" id="go-title">ZEIT ABGELAUFEN!</h1>
+            <div style="font-size: 12px; margin-top:10px;" id="go-score">PUNKTE: <span id="final-score" style="color:#ffcc00">0</span></div>
+            <div style="font-size: 11px; margin-top:8px; color:#00d2d3;">NEUE MÜNZEN: +<span id="gained-coins">0</span></div>
+        </div>
+
+        <div class="menu-row">
+            <button class="btn-main" id="restart-btn">NOCHMAL</button>
+            <button class="btn-secondary" id="home-btn">MENÜ</button>
+        </div>
+    </div>
+</div>
+
+<script>
+class SoundFx {
+    constructor() { this.ctx = null; this.muted = false; }
+    init() { if (!this.ctx) this.ctx = new (window.AudioContext || window.webkitAudioContext)(); }
+    playSwat() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime, osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'sawtooth'; osc.frequency.setValueAtTime(150, now); osc.frequency.exponentialRampToValueAtTime(30, now + 0.1);
+        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.1);
+        osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + 0.1);
+    }
+    playHit() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime, bufferSize = this.ctx.sampleRate * 0.08;
+        const buffer = this.ctx.createBuffer(1, bufferSize, this.ctx.sampleRate), data = buffer.getChannelData(0);
+        for (let i = 0; i < bufferSize; i++) data[i] = Math.random() * 2 - 1;
+        const noise = this.ctx.createBufferSource(); noise.buffer = buffer;
+        const gain = this.ctx.createGain(); gain.gain.setValueAtTime(0.4, now); gain.gain.exponentialRampToValueAtTime(0.01, now + 0.08);
+        noise.connect(gain); gain.connect(this.ctx.destination); noise.start(now);
+    }
+    playCoin() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime, osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'square'; osc.frequency.setValueAtTime(987.77, now); osc.frequency.setValueAtTime(1318.51, now + 0.08);
+        gain.gain.setValueAtTime(0.2, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + 0.25);
+    }
+    playPowerup() {
+        if (this.muted || !this.ctx) return;
+        const now = this.ctx.currentTime, osc = this.ctx.createOscillator(), gain = this.ctx.createGain();
+        osc.type = 'triangle'; osc.frequency.setValueAtTime(300, now); osc.frequency.linearRampToValueAtTime(800, now + 0.2);
+        gain.gain.setValueAtTime(0.3, now); gain.gain.linearRampToValueAtTime(0.01, now + 0.25);
+        osc.connect(gain); gain.connect(this.ctx.destination); osc.start(now); osc.stop(now + 0.25);
+    }
+}
+const sfx = new SoundFx();
+
+const STORAGE_KEY = 'bughitter_save_v2';
+let saveData = { highscore: 0, coins: 0, unlockedSkins: ['classic'], equippedSkin: 'classic' };
+
+function loadSave() {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    if (raw) { try { saveData = { ...saveData, ...JSON.parse(raw) }; } catch(e){} }
+    updateUIValues();
+}
+function saveGame() {
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(saveData));
+    updateUIValues();
+}
+function updateUIValues() {
+    document.getElementById('highscore-val').innerText = saveData.highscore;
+    document.getElementById('total-coins-val').innerText = saveData.coins;
+    document.getElementById('shop-coins-val').innerText = saveData.coins;
+}
+
+const SKINS = {
+    classic: { name: 'KLASSIK', price: 0, color: '#888888', gridColor: '#aaaaaa' },
+    cyber:   { name: 'NEON CYBER', price: 150, color: '#ff007f', gridColor: '#00f3ff' },
+    gold:    { name: 'GOLD GLANZ', price: 350, color: '#ffb700', gridColor: '#fff0a5' },
+    fire:    { name: 'FEUER STURM', price: 600, color: '#ff3f34', gridColor: '#ffc048' }
+};
+
+const canvas = document.getElementById('gameCanvas');
+const ctx = canvas.getContext('2d');
+let gameWidth = 800, gameHeight = 600;
+
+function resizeCanvas() {
+    gameWidth = window.innerWidth;
+    gameHeight = window.innerHeight;
+    canvas.width = gameWidth;
+    canvas.height = gameHeight;
+}
+window.addEventListener('resize', resizeCanvas);
+resizeCanvas();
+
+let isPlaying = false, isPaused = false, isMultiplayer = false, isHost = false;
+let score = 0, p2Score = 0, timeLeft = 30, currentGainedCoins = 0, freezeTimer = 0, timerInterval = null;
+let mouseX = gameWidth / 2, mouseY = gameHeight / 2, isSwatting = false, swatAnim = 0;
+let p2X = gameWidth / 2, p2Y = gameHeight / 2, p2Swatting = false;
+
+let bugs = [], splats = [], particles = [], currentBgTheme = 0;
+
+class Bug {
+    constructor(id, type = 'normal', x, y) {
+        this.id = id || Math.random().toString(36).substr(2, 9);
+        this.type = type;
+        this.x = x !== undefined ? x : Math.random() * (gameWidth - 100) + 50;
+        this.y = y !== undefined ? y : Math.random() * (gameHeight - 100) + 50;
+        
+        this.size = 54;
+        this.hitboxSize = 85;
+
+        this.vx = (Math.random() - 0.5) * 6;
+        this.vy = (Math.random() - 0.5) * 6;
+        this.animFrame = 0;
+
+        if (type === 'fast') {
+            this.vx *= 1.8; this.vy *= 1.8;
+            this.size = 44; this.hitboxSize = 75;
+        } else if (type === 'gold') {
+            this.vx *= 1.3; this.vy *= 1.3;
+            this.size = 60;
+        } else if (type === 'freeze') {
+            this.vx *= 0.8; this.vy *= 0.8;
+            this.size = 58;
+        } else if (type === 'nuke') {
+            this.vx *= 0.9; this.vy *= 0.9;
+            this.size = 64;
+        }
+    }
+
+    update() {
+        if (freezeTimer > 0) return;
+
+        this.x += this.vx; this.y += this.vy;
+        if (this.x < 40 || this.x > gameWidth - 40) this.vx *= -1;
+        if (this.y < 40 || this.y > gameHeight - 40) this.vy *= -1;
+        this.animFrame += 0.2;
+    }
+
+    draw() {
+        ctx.save();
+        ctx.translate(this.x, this.y);
+        ctx.rotate(Math.atan2(this.vy, this.vx) + Math.PI / 2);
+        const wingState = Math.sin(this.animFrame) > 0 ? 1 : -1;
+
+        if (this.type === 'normal') {
+            ctx.fillStyle = '#1e272e';
+            ctx.beginPath(); ctx.ellipse(0, 0, 14, 20, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ff3f34';
+            ctx.beginPath(); ctx.arc(-6, -14, 4, 0, Math.PI * 2); ctx.arc(6, -14, 4, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+            ctx.beginPath();
+            ctx.ellipse(-14 * wingState, -4, 16, 8, 0.4 * wingState, 0, Math.PI * 2);
+            ctx.ellipse(14 * wingState, -4, 16, 8, -0.4 * wingState, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'fast') {
+            ctx.fillStyle = '#d63031';
+            ctx.beginPath(); ctx.ellipse(0, 0, 10, 22, 0, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#1e272e'; ctx.fillRect(-2, -26, 4, 12);
+            ctx.fillStyle = 'rgba(0, 210, 211, 0.7)';
+            ctx.beginPath();
+            ctx.ellipse(-16 * wingState, -2, 18, 6, 0.2, 0, Math.PI * 2);
+            ctx.ellipse(16 * wingState, -2, 18, 6, -0.2, 0, Math.PI * 2);
+            ctx.fill();
+        } else if (this.type === 'gold') {
+            ctx.fillStyle = '#ffdd59';
+            ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffa801'; ctx.fillRect(-2, -18, 4, 36);
+            ctx.fillStyle = '#000'; ctx.fillRect(-8, -12, 4, 4); ctx.fillRect(4, -12, 4, 4);
+        } else if (this.type === 'freeze') {
+            ctx.fillStyle = '#00d2d3';
+            ctx.beginPath(); ctx.arc(0, 0, 16, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#fff'; ctx.font = '12px "Press Start 2P"'; ctx.fillText('❄', -8, 5);
+        } else if (this.type === 'nuke') {
+            ctx.fillStyle = '#ff3f34';
+            ctx.beginPath(); ctx.arc(0, 0, 18, 0, Math.PI * 2); ctx.fill();
+            ctx.fillStyle = '#ffc048'; ctx.font = '12px "Press Start 2P"'; ctx.fillText('💣', -8, 5);
+        }
+
+        ctx.restore();
+    }
+
+    isHit(mx, my) { return Math.hypot(this.x - mx, this.y - my) < this.hitboxSize / 2; }
+}
+
+function spawnBug() {
+    if (bugs.length >= 12) return;
+    const rand = Math.random();
+    let type = 'normal';
+    if (rand < 0.35) type = 'fast';
+    else if (rand < 0.50) type = 'gold';
+    else if (rand < 0.60) type = 'freeze';
+    else if (rand < 0.68) type = 'nuke';
+
+    const newBug = new Bug(null, type);
+    bugs.push(newBug);
+
+    if (isMultiplayer && isHost && conn && conn.open) {
+        conn.send({
+            type: 'spawn_bug',
+            bug: { id: newBug.id, bugType: newBug.type, x: newBug.x, y: newBug.y }
+        });
+    }
+}
+
+function createSplat(x, y, type = 'normal') {
+    let color = '#2d3436';
+    if (type === 'fast') color = '#d63031';
+    if (type === 'gold') color = '#ffdd59';
+    if (type === 'freeze') color = '#48dbfb';
+    if (type === 'nuke') color = '#ff9f43';
+
+    splats.push({ x, y, color, size: Math.random() * 20 + 25, rotation: Math.random() * Math.PI * 2 });
+    for (let i = 0; i < 14; i++) {
+        particles.push({ x, y, vx: (Math.random() - 0.5) * 12, vy: (Math.random() - 0.5) * 12, size: Math.random() * 5 + 3, color, life: 1.0 });
+    }
+}
+
+function drawBackground() {
+    if (currentBgTheme === 0) {
+        ctx.fillStyle = '#8f5229'; ctx.fillRect(0, 0, gameWidth, gameHeight);
+        ctx.fillStyle = '#733e1d';
+        for (let i = 0; i < gameHeight; i += 60) ctx.fillRect(0, i, gameWidth, 4);
+    } else if (currentBgTheme === 1) {
+        ctx.fillStyle = '#d1d8e0'; ctx.fillRect(0, 0, gameWidth, gameHeight);
+        ctx.fillStyle = '#a5b1c2';
+        for (let x = 0; x < gameWidth; x += 80) ctx.fillRect(x, 0, 4, gameHeight);
+        for (let y = 0; y < gameHeight; y += 80) ctx.fillRect(0, y, gameWidth, 4);
+    } else if (currentBgTheme === 2) {
+        ctx.fillStyle = '#20bf6b'; ctx.fillRect(0, 0, gameWidth, gameHeight);
+        ctx.fillStyle = '#26de81';
+        for (let x = 20; x < gameWidth; x += 60) {
+            for (let y = 20; y < gameHeight; y += 60) {
+                ctx.fillRect(x, y, 6, 12); ctx.fillRect(x+8, y-4, 6, 16);
+            }
+        }
+    } else {
+        ctx.fillStyle = '#eb3b5a'; ctx.fillRect(0, 0, gameWidth, gameHeight);
+        ctx.fillStyle = '#ffffff';
+        for (let x = 0; x < gameWidth; x += 100) {
+            for (let y = 0; y < gameHeight; y += 100) {
+                if ((x / 100 + y / 100) % 2 === 0) ctx.fillRect(x, y, 100, 100);
+            }
+        }
+    }
+
+    if (isMultiplayer) {
+        ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+        ctx.lineWidth = 4;
+        ctx.beginPath(); ctx.moveTo(0, gameHeight / 2); ctx.lineTo(gameWidth, gameHeight / 2); ctx.stroke();
+    }
+}
+
+function drawSwatter(x, y, skinKey, swatting) {
+    const skin = SKINS[skinKey] || SKINS.classic;
+    ctx.save();
+    ctx.translate(x, y);
+    if (swatting) ctx.scale(1, 0.4);
+
+    ctx.fillStyle = '#2d3436'; ctx.fillRect(-4, 0, 8, 100);
+    ctx.fillStyle = skin.color; ctx.fillRect(-30, -60, 60, 60);
+    ctx.fillStyle = skin.gridColor; ctx.fillRect(-26, -56, 52, 52);
+    ctx.restore();
+}
+
+function gameLoop() {
+    ctx.clearRect(0, 0, gameWidth, gameHeight);
+    drawBackground();
+
+    splats.forEach(s => {
+        ctx.save(); ctx.translate(s.x, s.y); ctx.rotate(s.rotation); ctx.fillStyle = s.color;
+        ctx.fillRect(-s.size/2, -s.size/2, s.size, s.size); ctx.restore();
+    });
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+        let p = particles[i]; p.x += p.vx; p.y += p.vy; p.life -= 0.04;
+        if (p.life <= 0) { particles.splice(i, 1); continue; }
+        ctx.fillStyle = p.color; ctx.globalAlpha = p.life; ctx.fillRect(p.x, p.y, p.size, p.size); ctx.globalAlpha = 1.0;
+    }
+
+    if (isPlaying && !isPaused) {
+        if (freezeTimer > 0) freezeTimer -= 1/60;
+
+        if (!isMultiplayer || isHost) {
+            if (bugs.length < 8 && Math.random() < 0.08) spawnBug();
+        }
+        bugs.forEach(bug => { bug.update(); bug.draw(); });
+    }
+
+    drawSwatter(mouseX, mouseY, saveData.equippedSkin, isSwatting);
+    if (isMultiplayer) drawSwatter(p2X, p2Y, 'cyber', p2Swatting);
+
+    if (isSwatting) swatAnim += 0.3; if (swatAnim >= Math.PI) { isSwatting = false; swatAnim = 0; }
+
+    if (isMultiplayer && conn && conn.open) {
+        sendPos();
+    }
+
+    requestAnimationFrame(gameLoop);
+}
+
+let peer = null, conn = null;
+
+function initPeer() {
+    if (peer) return;
+    const shortId = Math.floor(1000 + Math.random() * 9000).toString();
+    peer = new Peer('bughitter-' + shortId);
+
+    peer.on('open', (id) => {
+        document.getElementById('my-code-val').innerText = shortId;
+    });
+
+    peer.on('connection', (c) => {
+        conn = c; isHost = true; setupConnection();
+    });
+}
+
+function setupConnection() {
+    document.getElementById('mp-status').innerText = 'VERBUNDEN!';
+    document.getElementById('mp-status').style.color = '#2ed573';
+
+    conn.on('open', () => {
+        if (isHost) {
+            conn.send({ type: 'start' });
+            startMPGame(true);
+        }
+    });
+
+    conn.on('data', (data) => {
+        if (data.type === 'pos') { 
+            p2X = data.x; p2Y = data.y; p2Swatting = data.swat; 
+        }
+        else if (data.type === 'spawn_bug' && !isHost) {
+            const b = new Bug(data.bug.id, data.bug.bugType, data.bug.x, data.bug.y);
+            bugs.push(b);
+        }
+        else if (data.type === 'hit') {
+            createSplat(data.x, data.y, '#ff4757');
+            p2Score += 100;
+            document.getElementById('p2-score-val').innerText = p2Score;
+            bugs = bugs.filter(b => b.id !== data.bugId);
+        }
+        else if (data.type === 'start' && !isHost) { 
+            startMPGame(false); 
+        }
+    });
+}
+
+function sendPos() {
+    if (conn && conn.open) conn.send({ type: 'pos', x: mouseX, y: mouseY, swat: isSwatting });
+}
+
+function handleInput(x, y) {
+    if (!isPlaying || isPaused) return;
+    mouseX = x; mouseY = y; isSwatting = true; swatAnim = 0;
+    sfx.playSwat();
+
+    for (let i = bugs.length - 1; i >= 0; i--) {
+        if (bugs[i].isHit(mouseX, mouseY)) {
+            const hitBug = bugs[i];
+            createSplat(hitBug.x, hitBug.y, hitBug.type);
+            sfx.playHit();
+
+            if (hitBug.type === 'normal') {
+                score += 100; currentGainedCoins += 2;
+            } else if (hitBug.type === 'fast') {
+                score += 250; currentGainedCoins += 5;
+            } else if (hitBug.type === 'gold') {
+                score += 500; currentGainedCoins += 15; sfx.playCoin();
+            } else if (hitBug.type === 'freeze') {
+                freezeTimer = 5; sfx.playPowerup();
+            } else if (hitBug.type === 'nuke') {
+                bugs.forEach(b => createSplat(b.x, b.y, b.type));
+                score += bugs.length * 150; currentGainedCoins += bugs.length * 4;
+                bugs = []; sfx.playPowerup(); break;
+            }
+            
+            if (isMultiplayer && conn && conn.open) conn.send({ type: 'hit', bugId: hitBug.id, x: hitBug.x, y: hitBug.y });
+            bugs.splice(i, 1);
+            document.getElementById('score-val').innerText = score;
+            document.getElementById('coins-val').innerText = currentGainedCoins;
+            break;
+        }
+    }
+    if (isMultiplayer) sendPos();
+}
+
+window.addEventListener('mousemove', (e) => { mouseX = e.clientX; mouseY = e.clientY; if (isMultiplayer) sendPos(); });
+window.addEventListener('mousedown', (e) => handleInput(e.clientX, e.clientY));
+window.addEventListener('touchstart', (e) => {
+    if (e.touches.length > 0) handleInput(e.touches[0].clientX, e.touches[0].clientY);
+});
+
+function startGame() {
+    sfx.init(); isPlaying = true; isPaused = false; isMultiplayer = false;
+    currentBgTheme = Math.floor(Math.random() * 4);
+    score = 0; timeLeft = 30; currentGainedCoins = 0; freezeTimer = 0; bugs = []; splats = [];
+    for (let i = 0; i < 6; i++) spawnBug();
+
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('gameover-screen').style.display = 'none';
+    document.getElementById('pause-screen').style.display = 'none';
+    document.getElementById('p2-hud').style.display = 'none';
+    document.getElementById('hud').style.display = 'flex';
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (!isPaused && isPlaying) {
+            timeLeft--;
+            document.getElementById('time-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGame();
+        }
+    }, 1000);
+}
+
+function startMPGame(host) {
+    sfx.init(); isPlaying = true; isPaused = false; isMultiplayer = true; isHost = host;
+    score = 0; p2Score = 0; timeLeft = 30; bugs = []; splats = [];
+    if (isHost) for (let i = 0; i < 6; i++) spawnBug();
+
+    document.getElementById('mp-screen').style.display = 'none';
+    document.getElementById('p2-hud').style.display = 'flex';
+    document.getElementById('hud').style.display = 'flex';
+
+    clearInterval(timerInterval);
+    timerInterval = setInterval(() => {
+        if (isPlaying) {
+            timeLeft--;
+            document.getElementById('time-val').innerText = timeLeft;
+            if (timeLeft <= 0) endGameMP();
+        }
+    }, 1000);
+}
+
+function endGame() {
+    isPlaying = false; clearInterval(timerInterval);
+    saveData.coins += currentGainedCoins;
+    if (score > saveData.highscore) saveData.highscore = score;
+    saveGame();
+
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('final-score').innerText = score;
+    document.getElementById('gained-coins').innerText = currentGainedCoins;
+    document.getElementById('gameover-screen').style.display = 'flex';
+}
+
+function endGameMP() {
+    isPlaying = false; clearInterval(timerInterval);
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('go-title').innerText = score > p2Score ? 'GEWONNEN!' : (score < p2Score ? 'VERLOREN!' : 'UNENTSCHIEDEN!');
+    document.getElementById('go-score').innerText = `DU: ${score} | GEGNER: ${p2Score}`;
+    document.getElementById('gameover-screen').style.display = 'flex';
+}
+
+/* Event Listeners for UI */
+document.getElementById('start-btn').onclick = startGame;
+document.getElementById('restart-btn').onclick = startGame;
+document.getElementById('home-btn').onclick = () => {
+    document.getElementById('gameover-screen').style.display = 'none';
+    document.getElementById('start-screen').style.display = 'flex';
+};
+document.getElementById('mp-menu-btn').onclick = () => {
+    initPeer();
+    document.getElementById('start-screen').style.display = 'none';
+    document.getElementById('mp-screen').style.display = 'flex';
+};
+document.getElementById('close-mp-btn').onclick = () => {
+    document.getElementById('mp-screen').style.display = 'none';
+    document.getElementById('start-screen').style.display = 'flex';
+};
+document.getElementById('create-room-btn').onclick = () => {
+    document.getElementById('room-code-display').style.display = 'block';
+};
+document.getElementById('join-room-btn').onclick = () => {
+    const code = document.getElementById('join-code-input').value;
+    if (code.length === 4) {
+        conn = peer.connect('bughitter-' + code);
+        isHost = false; setupConnection();
+    }
+};
+
+document.getElementById('guidelines-btn').onclick = () => {
+    document.getElementById('guidelines-modal').style.display = 'flex';
+};
+document.getElementById('close-guidelines-btn').onclick = () => {
+    document.getElementById('guidelines-modal').style.display = 'none';
+};
+
+document.getElementById('pause-btn').onclick = () => {
+    isPaused = true; document.getElementById('pause-screen').style.display = 'flex';
+};
+document.getElementById('resume-btn').onclick = () => {
+    isPaused = false; document.getElementById('pause-screen').style.display = 'none';
+};
+document.getElementById('quit-btn').onclick = () => {
+    isPlaying = false; isPaused = false; clearInterval(timerInterval);
+    document.getElementById('pause-screen').style.display = 'none';
+    document.getElementById('hud').style.display = 'none';
+    document.getElementById('start-screen').style.display = 'flex';
+};
+
+document.getElementById('shop-btn').onclick = () => {
+    renderShop(); document.getElementById('shop-modal').style.display = 'flex';
+};
+document.getElementById('close-shop-btn').onclick = () => {
+    document.getElementById('shop-modal').style.display = 'none';
+};
+
+document.getElementById('sound-btn').onclick = () => {
+    sfx.muted = !sfx.muted; document.getElementById('sound-btn').innerText = sfx.muted ? '🔇' : '🔊';
+};
+
+function renderShop() {
+    const container = document.getElementById('shop-items'); container.innerHTML = '';
+    Object.keys(SKINS).forEach(key => {
+        const item = SKINS[key], isUnlocked = saveData.unlockedSkins.includes(key), isEquipped = saveData.equippedSkin === key;
+        const card = document.createElement('div'); card.className = `shop-card ${isEquipped ? 'active' : ''}`;
+        card.innerHTML = `
+            <div style="font-size:10px; color:#ffda79;">${item.name}</div>
+            <div style="width:36px; height:36px; background:${item.color}; border:3px solid ${item.gridColor};"></div>
+            <button class="btn-secondary" style="font-size:8px; padding:6px;">${isEquipped ? 'EQUIPPED' : (isUnlocked ? 'WÄHLEN' : item.price + ' C')}</button>
+        `;
+        card.querySelector('button').onclick = () => {
+            if (isUnlocked) { saveData.equippedSkin = key; saveGame(); renderShop(); }
+            else if (saveData.coins >= item.price) {
+                saveData.coins -= item.price; saveData.unlockedSkins.push(key); saveData.equippedSkin = key; saveGame(); renderShop();
+            }
+        };
+        container.appendChild(card);
+    });
+}
+
+loadSave();
+requestAnimationFrame(gameLoop);
+</script>
+</body>
+</html>
